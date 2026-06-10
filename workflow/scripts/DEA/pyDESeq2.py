@@ -102,22 +102,19 @@ adata.X = adata.layers['cts.raw'].copy()
 adata.obs[['disease_group', 'condition_group']].value_counts()
 
 # %%
-# make sure the factors and levels are in the right order (disease_group and condition_group)
+# create the combined DEA group used for the simpler one-factor design
 
-# These are the only levels used in the interaction model below.
-# The first category is the reference level for each factor.
+# These are the only levels used in this 2 x 2 test analysis.
 condition_levels = ["IFNG_neg", "IFNG_pos"]
 disease_levels = ["HR_control", "HR_case"]
 
 # Keep only samples belonging to the requested 2 x 2 design.
-# This protects the interaction model from additional levels that are not part of the question.
 adata = adata[
     adata.obs["condition_group"].isin(condition_levels)
     & adata.obs["disease_group"].isin(disease_levels)
 ].copy()
 
-# Store the variables as categorical with explicit ordering.
-# The formula below also encodes the reference levels explicitly for pyDESeq2/formulaic.
+# Store the original factors as categorical for clear ordering in summaries.
 adata.obs["condition_group"] = pd.Categorical(
     adata.obs["condition_group"],
     categories=condition_levels,
@@ -127,32 +124,36 @@ adata.obs["disease_group"] = pd.Categorical(
     categories=disease_levels,
 )
 
-# Combined label used only for checking sample balance and plotting.
-adata.obs["dea_group"] = pd.Categorical(
-    adata.obs["condition_group"].astype(str) + "_" + adata.obs["disease_group"].astype(str),
-    categories=[
-        "IFNG_neg_HR_control",
-        "IFNG_pos_HR_control",
-        "IFNG_neg_HR_case",
-        "IFNG_pos_HR_case",
-    ],
+# Merge disease_group and condition_group into the requested combined factor.
+# The separator is double underscore and the disease group comes first, e.g. HR_case__IFNG_pos.
+DEA_group_levels = [
+    "HR_control__IFNG_pos",
+    "HR_case__IFNG_pos",
+    "HR_control__IFNG_neg",
+    "HR_case__IFNG_neg",
+]
+adata.obs["DEA_group"] = pd.Categorical(
+    adata.obs["disease_group"].astype(str) + "__" + adata.obs["condition_group"].astype(str),
+    categories=DEA_group_levels,
 )
 
 # Sanity checks before model fitting.
 assert adata.n_obs > 0, "No samples left after subsetting to the requested DEA groups."
-assert not adata.obs[["condition_group", "disease_group"]].isna().any().any(), "Unexpected factor levels found."
+assert not adata.obs[["condition_group", "disease_group", "DEA_group"]].isna().any().any(), "Unexpected factor levels found."
 
 dea_sample_counts = (
-    adata.obs[["condition_group", "disease_group", "dea_group"]]
+    adata.obs[["DEA_group", "disease_group", "condition_group"]]
     .value_counts(sort=False)
     .rename("n_samples")
     .reset_index()
 )
 
-# A full-rank interaction model needs samples in each of the four cells.
-assert (dea_sample_counts["n_samples"] > 0).all(), "The 2 x 2 interaction design has an empty group."
+# A one-factor model with all combined levels needs samples in every level kept here.
+assert (dea_sample_counts["n_samples"] > 0).all(), "The combined DEA_group design has an empty group."
 
 dea_sample_counts
+
+# %%
 
 # %% [markdown]
 # ## <center> DEA
@@ -179,16 +180,11 @@ adata_dds = adata_dds[:, nonzero_genes].copy()
 adata_dds
 
 # %%
-# fit the DESeq2 model with the requested interaction design
+# fit the DESeq2 model with the simpler one-factor design
 
-# The C(..., Treatment(...)) terms encode the desired reference levels explicitly:
-# - condition_group reference: IFNG_neg
-# - disease_group reference: HR_control
-# The interaction term lets the IFNG effect differ between HR_case and HR_control.
-design_formula = (
-    "~ C(condition_group, Treatment('IFNG_neg'))"
-    " * C(disease_group, Treatment('HR_control'))"
-)
+# DEA_group combines disease_group and condition_group.
+# The test/reference direction is set explicitly in DeseqStats below.
+design_formula = "~ DEA_group"
 
 dds = DeseqDataSet(
     adata=adata_dds,
@@ -204,19 +200,13 @@ dds.deseq2()
 dds.obsm["design_matrix"].head()
 
 # %%
-# extract the requested contrast
+# extract the requested DEA_group contrast
 
-# This contrast compares the fitted mean for IFNG_pos / HR_case against
-# the fitted mean for IFNG_neg / HR_control. Therefore, a positive log2FC means
-# higher expression in IFNG_pos HR_case relative to IFNG_neg HR_control.
-contrast_ifng_hr = (
-    dds.cond(condition_group="IFNG_pos", disease_group="HR_case")
-    - dds.cond(condition_group="IFNG_neg", disease_group="HR_control")
-).to_numpy()
-
+# This compares HR_case__IFNG_pos against HR_control__IFNG_pos.
+# Therefore, a positive log2FC means higher expression in HR_case__IFNG_pos.
 stat_res = DeseqStats(
     dds,
-    contrast=contrast_ifng_hr,
+    contrast=["DEA_group", "HR_case__IFNG_pos", "HR_control__IFNG_pos"],
     alpha=0.05,
     cooks_filter=True,
     independent_filter=True,
@@ -231,7 +221,7 @@ deg.index.name = "gene_id"
 if "genesymbol" in adata_dds.var.columns:
     deg.insert(0, "genesymbol", adata_dds.var["genesymbol"].reindex(deg.index).astype(str))
 
-deg["contrast"] = "IFNG_pos_HR_case_vs_IFNG_neg_HR_control"
+deg["contrast"] = "HR_case__IFNG_pos_vs_HR_control__IFNG_pos"
 deg["significant_pvalue_0.05"] = deg["pvalue"] < 0.05
 deg["significant_padj_0.05"] = deg["padj"] < 0.05
 deg["direction"] = np.select(
@@ -239,7 +229,7 @@ deg["direction"] = np.select(
         deg["log2FoldChange"] > 0,
         deg["log2FoldChange"] < 0,
     ],
-    ["higher_IFNG_pos_HR_case", "higher_IFNG_neg_HR_control"],
+    ["higher_HR_case__IFNG_pos", "higher_HR_control__IFNG_pos"],
     default="no_change",
 )
 
@@ -311,7 +301,7 @@ fig = dc.pl.volcano(
     dpi=120,
     return_fig=True,
 )
-fig.axes[0].set_title("IFNG_pos HR_case vs IFNG_neg HR_control")
+fig.axes[0].set_title("HR_case__IFNG_pos vs HR_control__IFNG_pos")
 fig.savefig(out_plots / "volcano.png", bbox_inches="tight")
 fig.savefig(out_plots / "volcano.pdf", bbox_inches="tight")
 
