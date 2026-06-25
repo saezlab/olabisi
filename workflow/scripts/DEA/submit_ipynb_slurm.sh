@@ -8,7 +8,7 @@ Usage:
 
 Submit one Slurm batch job per notebook. Each job converts the notebook to a
 temporary .py script beside the notebook, runs it, and deletes the temporary
-script and Slurm log when the job exits.
+script when the job exits. Slurm output is discarded unless --keep-log is set.
 
 Defaults:
   --partition cpu-single
@@ -26,7 +26,7 @@ Options:
   --time TIME            Wall time request
   --conda-env NAME       Conda environment used for nbconvert and python
   --keep-temp-py         Keep the generated temporary .py script
-  --keep-log             Keep the Slurm log file
+  --keep-log             Keep the Slurm log file as slurm-JOBID.out
   --dry-run              Print what would be submitted
   -h, --help             Show this help
 
@@ -135,12 +135,17 @@ for notebook in "${notebooks[@]}"; do
     notebook_abs="$notebook_dir/$(basename "$notebook")"
     notebook_base="$(basename "$notebook_abs" .ipynb)"
     job_name="ipynb_${notebook_base//[^A-Za-z0-9_]/_}"
-    log_pattern="$notebook_dir/slurm-%j.out"
+    if [[ "$keep_log" == "1" ]]; then
+        log_pattern="$notebook_dir/slurm-%j.out"
+    else
+        log_pattern="/dev/null"
+    fi
 
     sbatch_cmd=(
         sbatch
         --job-name "$job_name"
         --output "$log_pattern"
+        --error "$log_pattern"
         --partition "$partition"
         --ntasks "$ntasks"
         --cpus-per-task "$cpus_per_task"
@@ -163,14 +168,15 @@ set -euo pipefail
 cd "$PROJECT_ROOT"
 
 tmp_py="$(dirname "$NOTEBOOK")/.$(basename "$NOTEBOOK" .ipynb).slurm_${SLURM_JOB_ID:-$$}.py"
-log_file="$(dirname "$NOTEBOOK")/slurm-${SLURM_JOB_ID:-unknown}.out"
+if [[ "${KEEP_LOG:-0}" == "1" ]]; then
+    log_file="$(dirname "$NOTEBOOK")/slurm-${SLURM_JOB_ID:-unknown}.out"
+else
+    log_file="/dev/null"
+fi
 
 cleanup() {
     if [[ "${KEEP_TEMP_PY:-0}" != "1" ]]; then
         rm -f "$tmp_py"
-    fi
-    if [[ "${KEEP_LOG:-0}" != "1" ]]; then
-        rm -f "$log_file"
     fi
 }
 trap cleanup EXIT
