@@ -1,0 +1,38 @@
+name: squidpy_v09
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python<3.11
+  - jupyterlab
+  - numpy<2 # breaks things if >2
+  - scanpy
+  - decoupler-py>=2
+  - statsmodels>=0.14.4
+  - squidpy>=1.6.2 # to fix import error https://github.com/scverse/squidpy/issues/915
+  - bioconda::liana=1.8
+  - bioconda::palantir
+  - conda-forge::mellon=1.7.1
+  - scipy>=1.15.2 # jax below works well with this version + same as squidpy_v06
+  - jax>=0.4.25,<0.5 # minimum version to avoid issue with mellon importing jax importing scipy.linalg.tril (which was later removed)
+  - jaxlib>=0.4.25,<0.5 # minimum version to avoid issue with mellon importing jax importing scipy.linalg.tril (which was later removed)
+  - bioconda::forceatlas2-python
+  - plotnine
+  - harmonypy
+  - leidenalg
+  - muon
+  - mudata
+  - pydeseq2
+  - anytree
+  - igraph
+  - graphviz
+  - networkx
+  - python-igraph
+  - scikit-bio
+  - mofapy2
+  - marsilea
+  - pybiomart
+  - pip
+
+## Changes from prev version
+### added bioconda::forceatlas2-python package as recommended by PAGA, put back squidpy>=1.6.2 from v06, newest liana 1.8.0
