@@ -2,15 +2,16 @@ from pathlib import Path
 
 
 def get_project_root(caller_globals, marker="workflow/Snakefile"):
-    script = caller_globals.get("__file__") or caller_globals.get("__vsc_ipynb_file__")
+    location = (
+        caller_globals.get("__file__")
+        or caller_globals.get("__vsc_ipynb_file__")
+        or Path.cwd()
+    )
+    location = Path(location).resolve()
+    start_dir = location if location.is_dir() else location.parent
 
-    if script is None:
-        raise RuntimeError("Could not infer script/notebook path.")
-
-    script = Path(script).resolve()
-
-    for path in [script.parent, *script.parents]:
+    for path in [start_dir, *start_dir.parents]:
         if (path / marker).exists():
             return path
 
-    raise RuntimeError(f"Could not find project root above {script}")
+    raise RuntimeError(f"Could not find project root above {start_dir}")
