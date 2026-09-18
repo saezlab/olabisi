@@ -9,8 +9,9 @@ dependencies:
   - scanpy
   - decoupler-py>=2
   - statsmodels>=0.14.4
-  - squidpy
-  - liana
+  - squidpy>=1.6.2 # to fix import error https://github.com/scverse/squidpy/issues/915
+  - bioconda::liana
+  - conda-forge::mofax
   - plotnine
   - harmonypy
   - leidenalg
