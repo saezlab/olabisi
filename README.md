@@ -1,20 +1,74 @@
 # Olabisi
 
-Small analyses on iPSC-derived podocytes for OCEAN manuscript.
-The data is from the Olabisi group.
+Reproducible bulk RNA-seq analysis of iPSC-derived podocytes for the OCEAN
+manuscript. The workflow performs preprocessing, a paired IFNG-response
+interaction analysis, empirical-null p-value calibration, CollecTRI/PROGENy
+ULM enrichment, and generation of manuscript Figures 5B, 5C, 5E, 5F, and 5G.
 
 ## Objective
 
-- Main research question: Is there an underlying reason for PODO from high-risk cases to react differently to INFg stimulation compared to PODO from high-risk controls?
+- Main research question: do podocytes from high-risk cases respond differently
+  to IFNG stimulation than podocytes from high-risk controls?
 
-- Analyses include: QC, differential gene expression, pathway enrichment
+- Analyses include QC, differential expression, TF/pathway activity inference,
+  and manuscript figure/source-data generation.
 
 ## Data
 
 - Human donors from two groups: APOL1 high-risk genotype FSGS donor (HR cases), APOL1 high-risk genotype healthy controls (HR controls).
 
-- PBMCs --> iPSCs reprogramming --> podocyte like.
+- PBMCs were reprogrammed to iPSCs and differentiated into podocyte-like cells.
 
--  Bulk RNA-seq dataset.
+- Bulk RNA-seq dataset.
 
-- Apart from the two groups, two conditions based on lab IFNg stimulation: IFNG+, IFNG-
+- Each donor has IFNG- and IFNG+ samples.
+
+## Software environments
+
+Snakemake 9 is installed in a small orchestration environment. Create and
+activate it once with:
+
+```bash
+mamba env create --file workflow/envs/snakemake9.yaml
+conda activate snakemake9
+mamba config set channel_priority strict
+snakemake --version
+```
+
+The workflow maintains exactly two rule-level environments:
+
+- `workflow/envs/pyenv.yaml` for Python analysis and plotting.
+- `workflow/envs/renv.yaml` for R calibration.
+
+Snakemake creates those environments automatically. The `snakemake9`
+environment only runs the workflow engine and is not attached to analysis
+rules. Snakemake 9 calls this deployment method `conda`; the Conda installed in
+`snakemake9` uses the libmamba solver. The deprecated
+`--conda-frontend mamba` flag is therefore neither needed nor used.
+
+## Run the paper workflow
+
+From the repository root, preview and then execute the complete paper target:
+
+```bash
+snakemake --snakefile workflow/Snakefile --cores 1 paper --software-deployment-method conda -n
+snakemake --snakefile workflow/Snakefile --cores 1 paper --software-deployment-method conda
+```
+
+To retrieve a missing prior-knowledge snapshot explicitly:
+
+```bash
+snakemake --snakefile workflow/Snakefile --cores 1 download_prior_knowledge --software-deployment-method conda
+```
+
+When the timestamped pre-refactor archive is available locally, regenerate its
+machine-readable comparison report with:
+
+```bash
+snakemake --snakefile workflow/Snakefile --cores 1 compare_archive --software-deployment-method conda
+```
+
+The timestamped Ensembl, CollecTRI, and PROGENy files distributed with the
+archived data are preferred. Retrieval checks the configured SHA-256 and fails
+if an upstream resource has changed, preventing an unnoticed change in the
+analysis.

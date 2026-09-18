@@ -1,0 +1,15 @@
+name: olabisi-renv
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - r-base=4.4.1
+  - r-fdrtool=1.2.18
+  - r-readr=2.2.0
+  - r-dplyr=1.2.0
+  - r-ggplot2=4.0.2
+  - r-ggrepel
+  - r-tidyr
+  - r-purrr
+  - bioconductor-fgsea

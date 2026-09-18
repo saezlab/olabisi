@@ -1,439 +1,96 @@
-from snakemake.utils import min_version
-min_version("6.0")
-import os
+from pathlib import Path
 
 configfile: "config/config.yaml"
 
-PROJECT_WORKDIR = os.environ.get("OLABISI_WORKDIR", os.getcwd())
-workdir: PROJECT_WORKDIR
-
-# define some variables
-batches=['pilot', 'run01sample01', 'run01sample02', 'run02sample01', 
-'run02sample02', 'run03sample01', 'run03sample02', 'run04sample01', 
-'run04sample02', 'run05sample01', 'run05sample02']
-celltype_levels=['lvl1', 'lvl2']
-
-# define some output
-## B_pseudobulks
-### makePCAs
-output_B_makePCAs_objects=[] 
-output_B_makePCAs_plots=[]
-for run_name in config['opts_B_makeMudata'].items():
-    for lvl_celltype in config['opts_B_makePCAs']:
-        #### objects
-        output_B_makePCAs_objects.append('output/scRNAseq/B_pseudobulks/objects/makePCAs/{run_name}_{lvl}/{view}/anova.tsv'.format(
-            run_name=run_name[0],
-            lvl=lvl_celltype[0],
-            view=lvl_celltype[1]))
-        #### plots
-        output_B_makePCAs_plots.append('output/scRNAseq/B_pseudobulks/plots/makePCAs/{run_name}_{lvl}/{view}/flag.txt'.format(
-            run_name=run_name[0],
-            lvl=lvl_celltype[0],
-            view=lvl_celltype[1]))
-### DEA_linearMixed_py
-output_B_DEAlinearMixedpy_objects=[] 
-output_B_DEAlinearMixedpy_plots=[] 
-for run_name in config['opts_B_makeMudata'].items():
-    for lvl in ['lvl1', 'lvl2']:
-        #### objects
-        filename="output/scRNAseq/B_pseudobulks/objects/DEA_linearMixed_py/{mdata_object_name}/degs.tsv".format(
-            mdata_object_name=run_name[0]+'_'+lvl)
-        output_B_DEAlinearMixedpy_objects.append(filename)
-        #### plots
-        filename="output/scRNAseq/B_pseudobulks/plots/DEA_linearMixed_py/{mdata_object_name}/flag.txt".format(
-            mdata_object_name=run_name[0]+'_'+lvl)
-        output_B_DEAlinearMixedpy_plots.append(filename)
-### DEA_linearMixedpy_funcomics
-output_B_DEAlinearMixedpyFuncomics_objects=[] 
-for run_name in config['opts_B_makeMudata'].items():
-    for lvl_celltype in config['opts_B_makePCAs']:
-        #### objects
-        output_B_DEAlinearMixedpyFuncomics_objects.append('output/scRNAseq/B_pseudobulks/objects/DEA_linearMixedpy_funcomics/{run_name}_{lvl}/{view}/kegg_gsea.tsv'.format(
-            run_name=run_name[0],
-            lvl=lvl_celltype[0],
-            view=lvl_celltype[1]))
-### DEA_linearMixedpy_plotFuncomics
-output_B_DEAlinearMixedpyPlotFuncomics_plots=[] 
-for run_name in config['opts_B_makeMudata'].items():
-    for lvl in ['lvl1', 'lvl2']:
-        #### plots
-        filename="output/scRNAseq/B_pseudobulks/plots/DEA_linearMixedpy_plotFuncomics/{run_name_lvl}/flag.txt".format(
-            run_name_lvl=run_name[0]+'_'+lvl)
-        output_B_DEAlinearMixedpyPlotFuncomics_plots.append(filename)
+ENSEMBL_SNAPSHOT = config["prior_knowledge"]["ensembl"]["path"]
+COLLECTRI_SNAPSHOT = config["prior_knowledge"]["collectri"]["path"]
+PROGENY_SNAPSHOT = config["prior_knowledge"]["progeny"]["path"]
+ENSEMBL_PROVENANCE = str(Path(ENSEMBL_SNAPSHOT).with_suffix(".provenance.json"))
+COLLECTRI_PROVENANCE = str(Path(COLLECTRI_SNAPSHOT).with_suffix(".provenance.json"))
+PROGENY_PROVENANCE = str(Path(PROGENY_SNAPSHOT).with_suffix(".provenance.json"))
 
 
-# print(f"\n\noutput_B_DEAlinearMixedpyFuncomics_objects:\n{output_B_DEAlinearMixedpyFuncomics_objects}\n\n")
-# print(f"\n\nlen(output_B_DEAlinearMixedpyFuncomics_objects): {len(output_B_DEAlinearMixedpyFuncomics_objects)}")
+PAPER_OUTPUTS = [
+    "results/preprocessing/metadata.tsv",
+    "results/preprocessing/adata.h5ad",
+    "results/preprocessing/counts.tsv",
+    "results/preprocessing/qc_summary.tsv",
+    "results/dea/interaction.tsv",
+    "results/dea/interaction_calibrated.tsv",
+    "results/dea/calibration_summary.tsv",
+    "results/enrichment/ulm.tsv",
+    "results/enrichment/ulm_input.tsv",
+    "results/enrichment/ulm_summary.tsv",
+    "results/paper/source_data/Fig5B_heatmap.tsv",
+    "results/paper/source_data/Fig5C_umap.tsv",
+    "results/paper/source_data/Fig5E_collectri.tsv",
+    "results/paper/source_data/Fig5F_progeny.tsv",
+    "results/paper/source_data/Fig5G_IRF1.tsv",
+    "results/paper/source_data/Fig5G_NFKB1.tsv",
+    "results/paper/source_data/Fig5G_Hypoxia.tsv",
+    "results/paper/source_data/Fig5G_NFkB.tsv",
+    "results/paper/source_data/Fig5G_TNFa.tsv",
+    "results/paper/source_data/Fig5G_JAK_STAT.tsv",
+    "results/paper/source_data/Fig5G_selected_genes.tsv",
+    "plots/paper/Fig5B_heatmap.png",
+    "plots/paper/Fig5B_heatmap.pdf",
+    "plots/paper/Fig5C_umap_groups.png",
+    "plots/paper/Fig5C_umap_groups.pdf",
+    "plots/paper/Fig5C_umap_markers.png",
+    "plots/paper/Fig5C_umap_markers.pdf",
+    "plots/paper/Fig5E_collectri.png",
+    "plots/paper/Fig5E_collectri.pdf",
+    "plots/paper/Fig5F_progeny.png",
+    "plots/paper/Fig5F_progeny.pdf",
+    "plots/paper/Fig5G_IRF1.png",
+    "plots/paper/Fig5G_IRF1.pdf",
+    "plots/paper/Fig5G_NFKB1.png",
+    "plots/paper/Fig5G_NFKB1.pdf",
+    "plots/paper/Fig5G_Hypoxia.png",
+    "plots/paper/Fig5G_Hypoxia.pdf",
+    "plots/paper/Fig5G_NFkB.png",
+    "plots/paper/Fig5G_NFkB.pdf",
+    "plots/paper/Fig5G_TNFa.png",
+    "plots/paper/Fig5G_TNFa.pdf",
+    "plots/paper/Fig5G_JAK_STAT.png",
+    "plots/paper/Fig5G_JAK_STAT.pdf",
+    "plots/paper/Fig5G_selected_genes.png",
+    "plots/paper/Fig5G_selected_genes.pdf",
+    "results/provenance/pyenv_packages.txt",
+    "results/provenance/renv_packages.txt",
+]
 
-# ## F_pseudobulks_reducedGrp
-# ### makePCAs
-# output_F_makePCAs_01=[] # objects
-# for run_name in config['mudata_opts'].items():
-#     for lvl_celltype in config['celltype_opts']:
-#         output_F_makePCAs_01.append('output/scRNAseq/F_pseudobulks_reducedGrp/objects/makePCAs/{run_name}_{lvl}/{view}/anova.tsv'.format(
-#             run_name=run_name[0],
-#             lvl=lvl_celltype[0],
-#             view=lvl_celltype[1]))
-# output_F_makePCAs_02=[] # plots
-# for run_name in config['mudata_opts'].items():
-#     for lvl_celltype in config['celltype_opts']:
-#         output_F_makePCAs_02.append('output/scRNAseq/F_pseudobulks_reducedGrp/plots/makePCAs/{run_name}_{lvl}/{view}/flag.txt'.format(
-#             run_name=run_name[0],
-#             lvl=lvl_celltype[0],
-#             view=lvl_celltype[1]))
-# ### DEA_linearMixed
-# output_F_DEA_linearMixed_py_01=[] # objects
-# for run_name in config['mudata_opts'].items():
-#     for lvl in ['lvl1', 'lvl2']:
-#         filename="output/scRNAseq/F_pseudobulks_reducedGrp/objects/DEA_linearMixed_py/{mdata_object_name}/degs.tsv".format(
-#             mdata_object_name=run_name[0]+'_'+lvl)
-#         output_F_DEA_linearMixed_py_01.append(filename)
-# output_F_DEA_linearMixed_py_02=[] # plots
-# for run_name in config['mudata_opts'].items():
-#     for lvl in ['lvl1', 'lvl2']:
-#         filename="output/scRNAseq/F_pseudobulks_reducedGrp/plots/DEA_linearMixed_py/{mdata_object_name}/flag.txt".format(
-#             mdata_object_name=run_name[0]+'_'+lvl)
-#         output_F_DEA_linearMixed_py_02.append(filename)
+
+localrules: all, paper, download_prior_knowledge, compare_archive
 
 
-
-# define which output files you would like to generate
-# when running the full pipeline
 rule all:
     input:
-        # A_preprocessing
-        ## objects
-        ### perBatch_QCFilterDemultiplex
-        expand('output/scRNAseq/A_preprocessing/objects/{batch}/adata_filtered.h5ad', batch=batches),
-        expand('output/scRNAseq/A_preprocessing/objects/{batch}/hashsolo.tsv', batch=batches),
-        expand('output/scRNAseq/A_preprocessing/objects/{batch}/QCres.tsv', batch=batches),
-        ### clean_metadata_new
-        'output/scRNAseq/A_preprocessing/objects/OLINK_clinical.tsv',
-        ### merge_batches
-        'output/scRNAseq/A_preprocessing/objects/adata_all.h5ad',
-        ### merged_QCandHarmonize
-        'output/scRNAseq/A_preprocessing/objects/merged/adata_harmonized.h5ad',
-        ### save_adata_byCluster
-        expand('output/scRNAseq/A_preprocessing/objects/merged/clust{cell_cluster}/adata.h5ad', cell_cluster=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14']),
-        ### merged_annotateCells_lvl1
-        'output/scRNAseq/A_preprocessing/objects/merged/adata_lvl1_3b.h5ad',
-        'output/scRNAseq/A_preprocessing/objects/merged/ora_top3.tsv',
-        ### merged_annotateCells_lvl2
-        'output/scRNAseq/A_preprocessing/objects/merged/lvl2_clusterMarkers_25.tsv',
-        ### merged_defineAnnot
-        'output/scRNAseq/A_preprocessing/objects/merged/adata_defineAnnot.h5ad',
-        ### merged_save_adata_obs
-        'output/scRNAseq/A_preprocessing/objects/merged/adata_obs.tsv',
-        ### merged_compositions_prepInput
-        'output/scRNAseq/A_preprocessing/objects/merged/compositions_prop.tsv',
-        
-        ## plots
-        'output/scRNAseq/A_preprocessing/plots/plot_cellRangerQC/flag.txt',
-        ### perBatch_QCFilterDemultiplex
-        expand('output/scRNAseq/A_preprocessing/plots/perBatch_QCFilterDemultiplex/{batch}/flag.txt', batch=batches),
-        ### plot_batchQC
-        'output/scRNAseq/A_preprocessing/plots/plot_batchQC/flag.txt', 
-        ### merged_QCandHarmonize
-        'output/scRNAseq/A_preprocessing/plots/merged_QCandHarmonize/flag.txt',
-        ### merged_annotateCells_lvl1
-        'output/scRNAseq/A_preprocessing/plots/merged_annotateCells_lvl1/flag.txt',
-        ### merged_annotateCells_lvl2
-        'output/scRNAseq/A_preprocessing/plots/merged_annotateCells_lvl2/flag.txt',
-        ### merged_defineAnnot
-        'output/scRNAseq/A_preprocessing/plots/merged_defineAnnot/flag.txt',
-        ### merged_plotDensity
-        'output/scRNAseq/A_preprocessing/plots/merged_plotDensity/flag.txt',
-        #'output/scRNAseq/A_preprocessing/plots/merged_annotateCells_lvl2_optimClustParams/flag.txt'
-        
-        # B_pseudobulks
-        ## objects
-        ### makePbulks_doQC
-        expand('output/scRNAseq/B_pseudobulks/objects/makePbulks_doQC/{lvl}/pdata.h5ad', lvl=celltype_levels),
-        ### makeMudata
-        expand('output/scRNAseq/B_pseudobulks/objects/makeMudata/{run_name}_{lvl}/mudata.h5mu', lvl = ['lvl1', 'lvl2'], run_name = config['opts_B_makeMudata'].keys()),
-        ### makePCAs
-        output_B_makePCAs_objects,
-        ### DEA_linearMixed_py
-        output_B_DEAlinearMixedpy_objects,
-        ### getGenesets
-        'output/scRNAseq/B_pseudobulks/objects/getGenesets/collectri_hs.tsv',
-        ### DEA_linearMixedpy_funcomics
-        output_B_DEAlinearMixedpyFuncomics_objects,
-        
-        # ### DEA_linearMixedpy_funcomics
-        # ['output/scRNAseq/B_pseudobulks/objects/DEA_linearMixedpy_funcomics/{lvl}/{view}/kegg_gsea.tsv'.format(lvl=x[0], view=x[1]) for x in config['DEA_linearMixed_py']],
+        PAPER_OUTPUTS
 
-        ## plots
-        ### makePbulks_doQC
-        expand('output/scRNAseq/B_pseudobulks/plots/makePbulks_doQC/{lvl}/flag.txt', lvl=celltype_levels),
-        ### makePCAs
-        output_B_makePCAs_plots,
-        ### DEA_linearMixed_py
-        output_B_DEAlinearMixedpy_plots,
-        ### DEA_linearMixedpy_plotFuncomics
-        output_B_DEAlinearMixedpyPlotFuncomics_plots
-        
-        # ### DEA_linearMixedpy_plotFuncomics
-        # ['output/scRNAseq/B_pseudobulks/plots/DEA_linearMixedpy_plotFuncomics/{lvl}/{view}/flag.txt'.format(lvl=x[0], view=x[1]) for x in config['DEA_linearMixed_py']],
 
-        # # MOFAcell
-        # ## objects
-        # ### MOFAcell_model
-        # expand('output/scRNAseq/C_MOFAcell/objects/MOFAcell_model/{lvl}/mofacell_model.h5ad', lvl=celltype_levels),
-        # ['output/scRNAseq/C_MOFAcell/objects/MOFAcell_model/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/mofacell_model.h5ad'.format(lvl='lvl1', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-        # ['output/scRNAseq/C_MOFAcell/objects/MOFAcell_model/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/mofacell_model.h5ad'.format(lvl='lvl2', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-        # ### MOFAcell_funcomics
-        # ['output/scRNAseq/C_MOFAcell/objects/MOFAcell_funcomics/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/collectri_acts.tsv'.format(lvl='lvl1', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-        # ['output/scRNAseq/C_MOFAcell/objects/MOFAcell_funcomics/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/collectri_acts.tsv'.format(lvl='lvl2', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-        # ### MOFAcell_associateFactors
-        # ['output/scRNAseq/C_MOFAcell/objects/MOFAcell_associateFactors/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/association_factorVars.tsv'.format(lvl='lvl1', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-        # ['output/scRNAseq/C_MOFAcell/objects/MOFAcell_associateFactors/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/association_factorVars.tsv'.format(lvl='lvl2', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-        # ## plots
-        # ### MOFAcell_plotModel
-        # ['output/scRNAseq/C_MOFAcell/plots/MOFAcell_plotModel/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/flag.txt'.format(lvl='lvl1', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-        # ['output/scRNAseq/C_MOFAcell/plots/MOFAcell_plotModel/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/flag.txt'.format(lvl='lvl2', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-        # ### MOFAcell_plotFuncomics
-        # ['output/scRNAseq/C_MOFAcell/plots/MOFAcell_plotFuncomics/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/flag.txt'.format(lvl='lvl1', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-        # ['output/scRNAseq/C_MOFAcell/plots/MOFAcell_plotFuncomics/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/flag.txt'.format(lvl='lvl2', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-        # ### MOFAcell_plotAssociatedFactors
-        # ['output/scRNAseq/C_MOFAcell/plots/MOFAcell_plotAssociatedFactors/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/flag.txt'.format(lvl='lvl1', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-        # ['output/scRNAseq/C_MOFAcell/plots/MOFAcell_plotAssociatedFactors/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/flag.txt'.format(lvl='lvl2', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-
-        # # OLINK
-        # ## objects
-        # 'output/olink/objects/DEA_linearRegress_py/degs.tsv',
-        # ## plots
-        # 'output/olink/plots/DEA_linearRegress_py/flag.txt',
-
-        # # F_pseudobulks_reducedGrp
-        # ## objects
-        # ### makeMudata
-        # [
-        #     'output/scRNAseq/F_pseudobulks_reducedGrp/objects/makeMudata/{run_name}_{lvl}/mudata.h5mu'.format(
-        #         run_name=d[0], lvl='lvl1') 
-        #         for d in config['mudata_opts'].items()
-        # ],
-        # [
-        #     'output/scRNAseq/F_pseudobulks_reducedGrp/objects/makeMudata/{run_name}_{lvl}/mudata.h5mu'.format(
-        #         run_name=d[0], lvl='lvl2') 
-        #         for d in config['mudata_opts'].items()
-        # ],
-        # ### makePCAs
-        # output_F_makePCAs_01,
-        # ### DEA_linearMixed
-        # output_F_DEA_linearMixed_py_01,
-        # ## plots
-        # ### makePCAs
-        # output_F_makePCAs_02,
-        # ### DEA_linearMixed
-        # output_F_DEA_linearMixed_py_02,
-
-        # # G_MOFAcell
-        # ## objects
-        # ### makeMudata
-        # [f'output/scRNAseq/G_MOFAcell/objects/makeMudata/{lvl}/mudata.h5mu' for lvl in ['lvl1', 'lvl2']],
-        # ### MOFAcell_model
-        # [f'output/scRNAseq/G_MOFAcell/objects/MOFAcell_model/{lvl}/r2_factorView.tsv' for lvl in ['lvl1', 'lvl2']],
-        # ### MOFAcell_funcomics
-        # [f'output/scRNAseq/G_MOFAcell/objects/MOFAcell_funcomics/{lvl}/collectri_acts.tsv' for lvl in ['lvl1', 'lvl2']],
-        # ### MOFAcell_associateFactors
-        # [f'output/scRNAseq/G_MOFAcell/objects/MOFAcell_associateFactors/{lvl}/association_factorVars.tsv' for lvl in ['lvl1', 'lvl2']],
-        # ## plots
-        # ### MOFAcell_plotModel
-        # [f'output/scRNAseq/G_MOFAcell/plots/MOFAcell_plotModel/{lvl}/flag.txt' for lvl in ['lvl1', 'lvl2']],
-        # ### MOFAcell_plotFuncomics
-        # [f'output/scRNAseq/G_MOFAcell/plots/MOFAcell_plotFuncomics/{lvl}/flag.txt' for lvl in ['lvl1', 'lvl2']],
-        # ### MOFAcell_plotAssociatedFactors
-        # [f'output/scRNAseq/G_MOFAcell/plots/MOFAcell_plotAssociatedFactors/{lvl}/flag.txt' for lvl in ['lvl1', 'lvl2']]
-        
-        
-
-# or when running individual modules
-rule preprocessing:
+rule paper:
     input:
-        ## objects
-        #'output/scRNAseq/A_preprocessing/objects/03_adata.h5ad',
-        #'output/scRNAseq/A_preprocessing/objects/metadata_OLINK.tsv'
-        ### perBatch_QCFilterDemultiplex
-        expand('output/scRNAseq/A_preprocessing/objects/{batch}/adata_filtered.h5ad', batch=batches),
-        expand('output/scRNAseq/A_preprocessing/objects/{batch}/hashsolo.tsv', batch=batches),
-        expand('output/scRNAseq/A_preprocessing/objects/{batch}/QCres.tsv', batch=batches),
-        ### clean_metadata_new
-        'output/scRNAseq/A_preprocessing/objects/OLINK_clinical.tsv',
-        ### merge_batches
-        'output/scRNAseq/A_preprocessing/objects/adata_all.h5ad',
-        ### merged_QCandHarmonize
-        'output/scRNAseq/A_preprocessing/objects/merged/adata_harmonized.h5ad',
-        ### save_adata_byCluster
-        expand('output/scRNAseq/A_preprocessing/objects/merged/clust{cell_cluster}/adata.h5ad', cell_cluster=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14']),
-        ### merged_annotateCells_lvl1
-        'output/scRNAseq/A_preprocessing/objects/merged/adata_lvl1_3b.h5ad',
-        'output/scRNAseq/A_preprocessing/objects/merged/ora_top3.tsv',
-        ### merged_annotateCells_lvl2
-        'output/scRNAseq/A_preprocessing/objects/merged/lvl2_clusterMarkers_25.tsv',
-        ### merged_defineAnnot
-        'output/scRNAseq/A_preprocessing/objects/merged/adata_defineAnnot.h5ad',
-        ### merged_save_adata_obs
-        'output/scRNAseq/A_preprocessing/objects/merged/adata_obs.tsv',
-        ### merged_compositions_prepInput
-        'output/scRNAseq/A_preprocessing/objects/merged/compositions_prop.tsv',
-        
-        ## plots
-        'output/scRNAseq/A_preprocessing/plots/plot_cellRangerQC/flag.txt',
-        ### perBatch_QCFilterDemultiplex
-        expand('output/scRNAseq/A_preprocessing/plots/perBatch_QCFilterDemultiplex/{batch}/flag.txt', batch=batches),
-        ### plot_batchQC
-        'output/scRNAseq/A_preprocessing/plots/plot_batchQC/flag.txt', 
-        ### merged_QCandHarmonize
-        'output/scRNAseq/A_preprocessing/plots/merged_QCandHarmonize/flag.txt',
-        ### merged_annotateCells_lvl1
-        'output/scRNAseq/A_preprocessing/plots/merged_annotateCells_lvl1/flag.txt',
-        ### merged_annotateCells_lvl2
-        'output/scRNAseq/A_preprocessing/plots/merged_annotateCells_lvl2/flag.txt',
-        ### merged_defineAnnot
-        'output/scRNAseq/A_preprocessing/plots/merged_defineAnnot/flag.txt',
-        ### merged_plotDensity
-        'output/scRNAseq/A_preprocessing/plots/merged_plotDensity/flag.txt'
-        #'output/scRNAseq/A_preprocessing/plots/merged_annotateCells_lvl2_optimClustParams/flag.txt'
+        PAPER_OUTPUTS
 
-rule pseudobulks:
+
+rule download_prior_knowledge:
     input:
-        ## objects
-        ### makePbulks_doQC
-        expand('output/scRNAseq/B_pseudobulks/objects/makePbulks_doQC/{lvl}/pdata.h5ad', lvl=celltype_levels),
-        ### makeMudata
-        expand('output/scRNAseq/B_pseudobulks/objects/makeMudata/{run_name}_{lvl}/mudata.h5mu', lvl = ['lvl1', 'lvl2'], run_name = config['opts_B_makeMudata'].keys()),
-        ### makePCAs
-        output_B_makePCAs_objects,
-        ### DEA_linearMixed_py
-        output_B_DEAlinearMixedpy_objects,
-        ### getGenesets
-        'output/scRNAseq/B_pseudobulks/objects/getGenesets/collectri_hs.tsv',
-        ### DEA_linearMixedpy_funcomics
-        output_B_DEAlinearMixedpyFuncomics_objects,
-
-#         ### DEA_linearMixedpy_funcomics
-#         ['output/scRNAseq/B_pseudobulks/objects/DEA_linearMixedpy_funcomics/{lvl}/{view}/kegg_gsea.tsv'.format(lvl=x[0], view=x[1]) for x in config['DEA_linearMixed_py']],
-
-        ## plots
-        ### makePbulks_doQC
-        expand('output/scRNAseq/B_pseudobulks/plots/makePbulks_doQC/{lvl}/flag.txt', lvl=celltype_levels),
-        ### makePCAs
-        output_B_makePCAs_plots,
-        ### DEA_linearMixed_py
-        output_B_DEAlinearMixedpy_plots,
-        ### DEA_linearMixedpy_plotFuncomics
-        output_B_DEAlinearMixedpyPlotFuncomics_plots
-
-#         ### DEA_linearMixedpy_plotFuncomics
-#         ['output/scRNAseq/B_pseudobulks/plots/DEA_linearMixedpy_plotFuncomics/{lvl}/{view}/flag.txt'.format(lvl=x[0], view=x[1]) for x in config['DEA_linearMixed_py']]
-
-# rule MOFAcell:
-#     input: 
-#         ## objects
-#         ### MOFAcell_model
-#         expand('output/scRNAseq/C_MOFAcell/objects/MOFAcell_model/{lvl}/mofacell_model.h5mu', lvl=celltype_levels),
-#         ['output/scRNAseq/C_MOFAcell/objects/MOFAcell_model/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/mofacell_model.h5ad'.format(lvl='lvl1', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-#         ['output/scRNAseq/C_MOFAcell/objects/MOFAcell_model/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/mofacell_model.h5ad'.format(lvl='lvl2', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-#         ### MOFAcell_funcomics
-#         ['output/scRNAseq/C_MOFAcell/objects/MOFAcell_funcomics/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/collectri_acts.tsv'.format(lvl='lvl1', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-#         ['output/scRNAseq/C_MOFAcell/objects/MOFAcell_funcomics/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/collectri_acts.tsv'.format(lvl='lvl2', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-#         ### MOFAcell_associateFactors
-#         ['output/scRNAseq/C_MOFAcell/objects/MOFAcell_associateFactors/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/association_factorVars.tsv'.format(lvl='lvl1', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-#         ['output/scRNAseq/C_MOFAcell/objects/MOFAcell_associateFactors/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/association_factorVars.tsv'.format(lvl='lvl2', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-#         ## plots
-#         ### MOFAcell_plotModel
-#         ['output/scRNAseq/C_MOFAcell/plots/MOFAcell_plotModel/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/flag.txt'.format(lvl='lvl1', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-#         ['output/scRNAseq/C_MOFAcell/plots/MOFAcell_plotModel/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/flag.txt'.format(lvl='lvl2', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-#         ### MOFAcell_plotFuncomics
-#         ['output/scRNAseq/C_MOFAcell/plots/MOFAcell_plotFuncomics/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/flag.txt'.format(lvl='lvl1', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-#         ['output/scRNAseq/C_MOFAcell/plots/MOFAcell_plotFuncomics/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/flag.txt'.format(lvl='lvl2', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-#         ### MOFAcell_plotAssociatedFactors
-#         ['output/scRNAseq/C_MOFAcell/plots/MOFAcell_plotAssociatedFactors/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/flag.txt'.format(lvl='lvl1', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()],
-#         ['output/scRNAseq/C_MOFAcell/plots/MOFAcell_plotAssociatedFactors/{lvl}/remOutlierBatch{rm}_adjBatch{adj}_combat{combat}_coV{coV}/flag.txt'.format(lvl='lvl2', rm=mode[1]["remove_outlier_batches"], adj=mode[1]["account_for_batch"], combat=mode[1]["use_combat"], coV='&'.join(mode[1]["combat_covariates"])) for mode in config["modelRun_options"].items()]
-
-# rule olink:
-#     input:
-#         # OLINK
-#         ## objects
-#         'output/olink/objects/DEA_linearRegress_py/degs.tsv',
-#         ## plots
-#         'output/olink/plots/DEA_linearRegress_py/flag.txt'
-
-# rule F_pseudobulks_reducedGrp:
-#     input:
-#         ## objects
-#         ### makeMudata
-#         [
-#             'output/scRNAseq/F_pseudobulks_reducedGrp/objects/makeMudata/{run_name}_{lvl}/mudata.h5mu'.format(
-#                 run_name=d[0], lvl='lvl1') 
-#                 for d in config['mudata_opts'].items()
-#         ],
-#         [
-#             'output/scRNAseq/F_pseudobulks_reducedGrp/objects/makeMudata/{run_name}_{lvl}/mudata.h5mu'.format(
-#                 run_name=d[0], lvl='lvl2') 
-#                 for d in config['mudata_opts'].items()
-#         ],
-#         ### makePCAs
-#         output_F_makePCAs_01,
-#         ### DEA_linearMixed
-#         output_F_DEA_linearMixed_py_01,
-#         ## plots
-#         ### makePCAs
-#         output_F_makePCAs_02,
-#         ### DEA_linearMixed
-#         output_F_DEA_linearMixed_py_02
-
-# rule G_MOFAcell:
-#     input:
-#         ## objects
-#         ### makeMudata
-#         [f'output/scRNAseq/G_MOFAcell/objects/makeMudata/{lvl}/mudata.h5mu' for lvl in ['lvl1', 'lvl2']],
-#         ### MOFAcell_model
-#         [f'output/scRNAseq/G_MOFAcell/objects/MOFAcell_model/{lvl}/r2_factorView.tsv' for lvl in ['lvl1', 'lvl2']],
-#         ### MOFAcell_funcomics
-#         [f'output/scRNAseq/G_MOFAcell/objects/MOFAcell_funcomics/{lvl}/collectri_acts.tsv' for lvl in ['lvl1', 'lvl2']],
-#         ### MOFAcell_associateFactors
-#         [f'output/scRNAseq/G_MOFAcell/objects/MOFAcell_associateFactors/{lvl}/association_factorVars.tsv' for lvl in ['lvl1', 'lvl2']],
-#         ## plots
-#         ### MOFAcell_plotModel
-#         [f'output/scRNAseq/G_MOFAcell/plots/MOFAcell_plotModel/{lvl}/flag.txt' for lvl in ['lvl1', 'lvl2']],
-#         ### MOFAcell_plotFuncomics
-#         [f'output/scRNAseq/G_MOFAcell/plots/MOFAcell_plotFuncomics/{lvl}/flag.txt' for lvl in ['lvl1', 'lvl2']],
-#         ### MOFAcell_plotAssociatedFactors
-#         [f'output/scRNAseq/G_MOFAcell/plots/MOFAcell_plotAssociatedFactors/{lvl}/flag.txt' for lvl in ['lvl1', 'lvl2']]
+        ENSEMBL_SNAPSHOT,
+        ENSEMBL_PROVENANCE,
+        COLLECTRI_SNAPSHOT,
+        COLLECTRI_PROVENANCE,
+        PROGENY_SNAPSHOT,
+        PROGENY_PROVENANCE
 
 
-if os.path.exists(os.path.join("rules", "preprocessing.smk")):
-    module preprocessing:
-        snakefile: 'rules/preprocessing.smk'
-        config: config
-    use rule * from preprocessing as A_pp_*
+rule compare_archive:
+    input:
+        "results/provenance/old_to_new_comparison.json"
 
-if os.path.exists(os.path.join("rules", "B_pseudobulks.smk")):
-    module pseudobulks:
-        snakefile: 'rules/B_pseudobulks.smk'
-        config: config
-    use rule * from pseudobulks as B_pbulks_*
 
+include: "rules/prior_knowledge.smk"
+include: "rules/preprocessing.smk"
 include: "rules/DEA.smk"
-
-# module MOFAcell:
-#     snakefile: 'rules/C_MOFAcell.smk'
-#     config: config
-# use rule * from MOFAcell as C_MOFAcell_*
-
-# module olink:
-#     snakefile: 'rules/olink.smk'
-#     config: config
-# use rule * from olink as OLINK_*
-
-# module F_pbulks_reducedGrp:
-#     snakefile: 'rules/F_pseudobulks_reducedGrp.smk'
-#     config: config
-# use rule * from F_pbulks_reducedGrp as F_pbulks_reduced_*
-
-# module G_MOFAcell:
-#     snakefile: 'rules/G_MOFAcell.smk'
-#     config: config
-# use rule * from G_MOFAcell as G_MOFAcell_*
+include: "rules/figures.smk"
+include: "rules/provenance.smk"

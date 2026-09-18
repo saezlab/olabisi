@@ -1,239 +1,31 @@
-# project_name: 'IgAN_PBMC_NL'
-# organism: 'human'
+random_seed: 0
 
-# preprocessing:
-#   # Info about the dataset (Seurat obj)
-#   snRNAseq:
-#     assays: {'main_assay': 'RNA', 'slot': 'counts'}
-#     reductions: {'umap': 'umap'} # 'pca' also available I think
+prior_knowledge:
+  ensembl:
+    path: data/prior_knowledge/ensembl_gene_symbols_20260608.tsv
+    sha256: 07278e787896b42a0487e835a1a88817b9405f234bd45ed425724e7df5a55d22
+  collectri:
+    path: data/prior_knowledge/collectri_20260610.tsv
+    sha256: 9fbbab30401b9e7aeb3e1c2dfbdf686e3e8aeebbd8b13cb7ff5adfb3482c3b9f
+  progeny:
+    path: data/prior_knowledge/progeny_20260610.tsv
+    sha256: f84121b0b542ab9695221a73f1dd7b117e4c96cd39a0e0c451aeb576b436f342
 
-# # info about mofacell settings for each dataset
-# mofacell:
-#   snRNAseq:
-#     drop_views: ['CD8_T', 'Memory_B2', 'pDC'] # Not enough coverage over samples
+preprocessing:
+  min_cells: 5
+  min_total_count: 10
+  min_count: 10
+  min_prop: 0.25
+  highly_variable_genes: 2000
+  pca_components: 20
+  neighbors: 15
+  leiden_resolution: 0.15
 
-
-# subsets:
-#   all: 
-#     sample_subset: 'all'
-#     groupby: 'cell_type'
-#     cell_subset: 'all'
-#     omic: 'snRNA'
-#   remove_outlier:
-#     sample_subset: ['10X_IgAN268', '10X_IgAN289', '10X_RT231', '10X_RT259']
-#     groupby: 'cell_type'
-#     cell_subset: 'all'
-#     omic: 'snRNA'
-  
-batches: ['pilot', 'run01sample01', 'run01sample02', 'run02sample01', 
-'run02sample02', 'run03sample01', 'run03sample02', 'run04sample01', 
-'run04sample02', 'run05sample01', 'run05sample02']
-
-#clusters_lvl1: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
-
-cell_type: ['B', 'DC', 'ILC', 'Mono', 'Plasma', 'Progenitors', 'T_CD4_NonNaive', 'T_CD8_NonNaive', 'UTC']
-
-celltype_levels: ['lvl1', 'lvl2']
-
-#####################################
-########### B_pseudobulks ###########
-#####################################
-
-# B_pseudobulks, makeMudata
-opts_B_makeMudata:
-  condition_34v34:
-    mask_sample_filter: "(condition_34v34==True)"
-    formula_right: 'condition+ageatvisit+sex'
-
-  condition_20v20:
-    mask_sample_filter: "(condition_20v20==True)"
-    formula_right: 'condition+ageatvisit+sex'
-
-  IgANHigh_vs_ctrlHigh:
-    mask_sample_filter: "(IgANHigh_vs_ctrlHigh==True)"
-    formula_right: 'condition+ageatvisit+sex'
-
-  IgANLow_vs_ctrlLow:
-    mask_sample_filter: "(IgANLow_vs_ctrlLow==True)"
-    formula_right: 'condition+ageatvisit+sex'
-
-  IgANHigh_vs_IgANLow:
-    mask_sample_filter: "(IgANHigh_vs_IgANLow==True)"
-    formula_right: 'prot_bin+ageatvisit+sex'
-
-
-# B_pseudobulks, makePCAs
-opts_B_makePCAs: [
-  ['lvl1', 'T_CD4_nonNaive'],
-  ['lvl1', 'T_CD4_naive'],
-  ['lvl1', 'T_CD8_nonNaive_UTC'],
-  ['lvl1', 'T_CD8_naive'],
-  ['lvl1', 'B'],
-  #['lvl1', 'Plasma'], # left out because very lowly abundant
-  ['lvl1', 'Mono_c'],
-  ['lvl1', 'Mono_nonC'],
-  ['lvl1', 'NK'],
-  ['lvl1', 'MAIT'],
-  ['lvl1', 'DC'],
-  ['lvl1', 'pDC'],
-  
-  ['lvl2', 'T_CD4_CM'],
-  ['lvl2', 'T_CD4_eff'], 
-  ['lvl2', 'T_CD4_EM'],
-  ['lvl2', 'T_CD4_Tregs'],
-  ['lvl2', 'T_CD8_CM'],
-  ['lvl2', 'T_CD8_EM'],
-  ['lvl2', 'T_gd'],
-  ['lvl2', 'T_CD8_EM'], # this one is repeated but it did not throw any error...
-  #['lvl2', 'T_CD8_activated'], # left out because very lowly abundant
-  ['lvl2', 'B_transitional'],
-  ['lvl2', 'B_mem_switched'],
-  ['lvl2', 'Mono_c'],
-  ['lvl2', 'Mono_c_AP'],
-  ['lvl2', 'Mono_c_IFN'], 
-  ['lvl2', 'NK_CD16'],
-  ['lvl2', 'NK_CD56']]
-
-
-########################################
-########### C_MOFAcell_model ###########
-########################################
-
-# options for C_MOFAcell_model
-modelRun_options: {
-  mode0: {'remove_outlier_batches': False, 'account_for_batch': False, 'use_combat': False, 'combat_covariates': ['None']},
-  mode1: {'remove_outlier_batches': True, 'account_for_batch': False, 'use_combat': False, 'combat_covariates': ['None']},
-  mode2: {'remove_outlier_batches': False, 'account_for_batch': True, 'use_combat': False, 'combat_covariates': ['None']},
-  mode3: {'remove_outlier_batches': False, 'account_for_batch': False, 'use_combat': True, 'combat_covariates': ['None']},
-  mode4: {'remove_outlier_batches': False, 'account_for_batch': False, 'use_combat': True, 'combat_covariates': ['condition']},
-  mode5: {'remove_outlier_batches': False, 'account_for_batch': False, 'use_combat': True, 'combat_covariates': ['condition', 'eGFR_calc']}
-}
-
-
-################################################
-########### F_pseudobulks_reducedGrp ###########
-################################################
-
-# options for F_pseudobulks_reducedGrp, makeMudata
-mudata_opts:
-  # grp(IgAN)
-  ## batch(all)
-  grp(IgAN)_batch(all)_combatHVG(True):
-    group: 'IgAN'
-    batch: 'all'
-    combatHVG: 'True'
-    add_paired_ctrls: 'False'
-    mask_sample_filter: "(condition=='IgAN')&(eGFR_calc>=60)"
-    formula_right: 'prot_log+ageatvisit+sex|prot_bin+ageatvisit+sex'
-  grp(IgAN)_batch(all)_combatHVG(False):
-    group: 'IgAN'
-    batch: 'all'
-    combatHVG: 'False'
-    add_paired_ctrls: 'False'
-    mask_sample_filter: "(condition=='IgAN')&(eGFR_calc>=60)"
-    formula_right: 'prot_log+ageatvisit+sex|prot_bin+ageatvisit+sex'
-  ## batch(~pilot)
-  grp(IgAN)_batch(~pilot)_combatHVG(True):
-    group: 'IgAN'
-    batch: '~pilot'
-    combatHVG: 'True'
-    add_paired_ctrls: 'False'
-    mask_sample_filter: "(condition=='IgAN')&(eGFR_calc>=60)&(batch!='pilot')"
-    formula_right: 'prot_log+ageatvisit+sex|prot_bin+ageatvisit+sex'
-  grp(IgAN)_batch(~pilot)_combatHVG(False):
-    group: 'IgAN'
-    batch: '~pilot'
-    combatHVG: 'False'
-    add_paired_ctrls: 'False'
-    mask_sample_filter: "(condition=='IgAN')&(eGFR_calc>=60)&(batch!='pilot')"
-    formula_right: 'prot_log+ageatvisit+sex|prot_bin+ageatvisit+sex'
-  ## batch(~pilot&r01s01)
-  grp(IgAN)_batch(~pilot&r01s01)_combatHVG(True):
-    group: 'IgAN'
-    batch: '~pilot&r01s01'
-    combatHVG: 'True'
-    add_paired_ctrls: 'False'
-    mask_sample_filter: "(condition=='IgAN')&(eGFR_calc>=60)&(batch not in ['pilot', 'run01sample01'])"
-    formula_right: 'prot_log+ageatvisit+sex|prot_bin+ageatvisit+sex'
-  grp(IgAN)_batch(~pilot&r01s01)_combatHVG(False):
-    group: 'IgAN'
-    batch: '~pilot&r01s01'
-    combatHVG: 'False'
-    add_paired_ctrls: 'False'
-    mask_sample_filter: "(condition=='IgAN')&(eGFR_calc>=60)&(batch not in ['pilot', 'run01sample01'])"
-    formula_right: 'prot_log+ageatvisit+sex|prot_bin+ageatvisit+sex'
-  # grp(IgAN-ctrl)
-  ## batch(all)
-  grp(IgAN-ctrl)_batch(all)_combatHVG(True):
-    group: 'IgAN-ctrl'
-    batch: 'all'
-    combatHVG: 'True'
-    add_paired_ctrls: 'True'
-    mask_sample_filter: "(condition=='IgAN')&(eGFR_calc>=60)"
-    formula_right: 'condition+ageatvisit+sex'
-  grp(IgAN-ctrl)_batch(all)_combatHVG(False):
-    group: 'IgAN-ctrl'
-    batch: 'all'
-    combatHVG: 'False'
-    add_paired_ctrls: 'True'
-    mask_sample_filter: "(condition=='IgAN')&(eGFR_calc>=60)"
-    formula_right: 'condition+ageatvisit+sex'
-  ## batch(~pilot)
-  grp(IgAN-ctrl)_batch(~pilot)_combatHVG(True):
-    group: 'IgAN-ctrl'
-    batch: '~pilot'
-    combatHVG: 'True'
-    add_paired_ctrls: 'True'
-    mask_sample_filter: "(condition=='IgAN')&(eGFR_calc>=60)&(batch!='pilot')"
-    formula_right: 'condition+ageatvisit+sex'
-  grp(IgAN-ctrl)_batch(~pilot)_combatHVG(False):
-    group: 'IgAN-ctrl'
-    batch: '~pilot'
-    combatHVG: 'False'
-    add_paired_ctrls: 'True'
-    mask_sample_filter: "(condition=='IgAN')&(eGFR_calc>=60)&(batch!='pilot')"
-    formula_right: 'condition+ageatvisit+sex'
-  ## batch(~pilot&r01s01)
-  grp(IgAN-ctrl)_batch(~pilot&r01s01)_combatHVG(True):
-    group: 'IgAN-ctrl'
-    batch: '~pilot&r01s01'
-    combatHVG: 'True'
-    add_paired_ctrls: 'True'
-    mask_sample_filter: "(condition=='IgAN')&(eGFR_calc>=60)&(batch not in ['pilot', 'run01sample01'])"
-    formula_right: 'condition+ageatvisit+sex'
-  grp(IgAN-ctrl)_batch(~pilot&r01s01)_combatHVG(False):
-    group: 'IgAN-ctrl'
-    batch: '~pilot&r01s01'
-    combatHVG: 'False'
-    add_paired_ctrls: 'True'
-    mask_sample_filter: "(condition=='IgAN')&(eGFR_calc>=60)&(batch not in ['pilot', 'run01sample01'])"
-    formula_right: 'condition+ageatvisit+sex'
-
-# options for F_pseudobulks_reducedGrp, rule: makePCAs
-celltype_opts: [['lvl1', 'B'],
- ['lvl1', 'DC'],
- ['lvl1', 'ILC'],
- ['lvl1', 'Mono'],
- ['lvl1', 'T_CD4_nonNaive'],
- ['lvl1', 'T_CD8_nonNaive_UTC'],
- ['lvl1', 'T_naive'],
- ['lvl1', 'pDC'],
- ['lvl2', 'B_mem_switched'],
- ['lvl2', 'B_transitional'],
- ['lvl2', 'DC5'],
- ['lvl2', 'MAIT'],
- ['lvl2', 'Mono_'],
- ['lvl2', 'Mono_IFNresponse'],
- ['lvl2', 'Mono_cDC2'],
- ['lvl2', 'Mono_classical'],
- ['lvl2', 'Mono_nonClassical'],
- ['lvl2', 'NK_CD16high'],
- ['lvl2', 'NK_CD56high'],
- ['lvl2', 'T_CD4_CM_ribo'],
- ['lvl2', 'T_CD4_eff'],
- ['lvl2', 'T_CD8_CM_stem'],
- ['lvl2', 'T_CD8_EM_CX3CR1high'],
- ['lvl2', 'T_CD8_activated'],
- ['lvl2', 'T_progenitors'],
- ['lvl2', 'Tregs_activated'],
- ['lvl2', 'cDC2']]
+figures:
+  podocyte_markers: [APOL1, ACTN4, LAMB2, ITGB1, SYNPO, VEGFA, KIRREL1, COL4A5, ITGA3, LAMA5, SULF1, NPNT, CD2AP, TCF21, FAT1, PODXL, PLA2R1, MAFB]
+  umap_markers: [PLA2R1, ITGA3, PODXL, OLFM3]
+  collectri_panels: [IRF1, NFKB1]
+  progeny_panels: [Hypoxia, NFkB, TNFa, JAK-STAT]
+  selected_genes: [APOL1, APOL6, IRF1, STAT1, STAT2, STAT3, IRF2, IRF8, IRF9, CCL2, CXCL9, CXCL10, CXCL11, ICAM1, IDO1, GBP1, PSMB9, TMEM140, CTSS]
+  top_targets: 18
+  overview_top: 10

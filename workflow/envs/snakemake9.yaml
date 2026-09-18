@@ -1,0 +1,11 @@
+name: snakemake9
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - python=3.12
+  - snakemake>=9,<10
+  - conda>=24
+  - conda-libmamba-solver
+  - mamba>=2
