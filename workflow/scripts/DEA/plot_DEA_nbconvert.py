@@ -355,3 +355,123 @@ p=(
 p.save(out_plots / "Fig5g_boxplot_02.png", width=w, height=h, limitsize=False)
 p.save(out_plots / "Fig5g_boxplot_02.pdf", width=w, height=h, limitsize=False)
 plt.close()
+
+## corrected version with full intended gene set and zero-based y axes
+keys_corrected = [
+    'APOL1', 'APOL6', 'IRF1', 'CCL2', 'CXCL9', 'CXCL10',
+    'ICAM1', 'IDO1', 'PDCD1LG2', 'GBP1', 'PSMB9', 'CCDC68',
+    'CTSS', 'TMEM140', 'TRIM21', 'STAT1', 'STAT2', 'STAT3',
+    'IRF2', 'IRF8', 'IRF9', 'CXCL11'
+]
+missing_keys = [k for k in keys_corrected if k not in tmp.var_names]
+if missing_keys:
+    print(f"Warning: requested genes missing from adata.var_names and omitted: {missing_keys}")
+keys_corrected = [k for k in keys_corrected if k in tmp.var_names]
+
+ptab = pd.DataFrame(tmp.layers['cts.deseq2_norm'], index=tmp.obs.index, columns=tmp.var.index)
+ptab = (
+    ptab[keys_corrected].reset_index()
+    .melt(id_vars=['sample_id'], var_name='genesymbol', value_name='expr')
+)
+col_dict = tmp.obs['individualID'].to_dict()
+ptab['individualID'] = ptab['sample_id'].map(col_dict)
+for col in ['condition_group']:
+    col_dict = tmp.obs[col].to_dict()
+    ptab[col] = ptab['sample_id'].map(col_dict)
+
+ptab = (
+    ptab
+    .groupby(["individualID", "genesymbol", "condition_group"], observed=True)["expr"]
+    .mean()
+    .reset_index()
+    .pivot(index=["individualID", "genesymbol"], columns="condition_group", values="expr")
+    .reset_index()
+)
+ptab["fold_change"] = (ptab["IFNG_pos"] + eps) / (ptab["IFNG_neg"] + eps)
+ptab["log2_fold_change"] = np.log2(ptab["fold_change"])
+
+col_dict = tmp.obs.set_index('individualID')['disease_group'].to_dict()
+ptab['grp'] = ptab['individualID'].map(col_dict)
+col_dict = {'HR_case': 'HR case, IFNG+ vs IFNG-', 'HR_control': 'HR control, IFNG+ vs IFNG-'}
+ptab['grp'] = ptab['grp'].map(col_dict)
+ptab['grp'] = ptab['grp'].astype('category').cat.reorder_categories(
+    ['HR case, IFNG+ vs IFNG-', 'HR control, IFNG+ vs IFNG-'],
+    ordered=True,
+)
+for col in ['stat', 'padj']:
+    col_dict = {x: y for x, y in zip(deg['genesymbol'], deg[col])}
+    ptab[col] = ptab['genesymbol'].map(col_dict)
+ptab['genesymbol'] = pd.Categorical(ptab['genesymbol'], categories=keys_corrected, ordered=True)
+ptab['p_title'] = pd.Categorical(ptab['genesymbol'].astype(str), categories=keys_corrected, ordered=True)
+ptab = ptab.sort_values(['p_title', 'grp', 'individualID']).reset_index(drop=True)
+
+ymax_by_gene = (
+    ptab.groupby('genesymbol', observed=True)['log2_fold_change']
+    .agg(ymin='min', ymax='max')
+    .reset_index()
+)
+ymax_by_gene['yrange'] = ymax_by_gene['ymax'] - ymax_by_gene['ymin']
+ymax_by_gene['ypad'] = np.where(
+    ymax_by_gene['yrange'] > 0,
+    ymax_by_gene['yrange'] * 0.08,
+    0.25,
+)
+axis_limits = pd.concat(
+    [
+        ymax_by_gene[['genesymbol', 'ymin', 'ypad']].rename(columns={'ymin': 'log2_fold_change'}),
+        ymax_by_gene[['genesymbol', 'ymax', 'ypad']].rename(columns={'ymax': 'log2_fold_change'}),
+    ],
+    ignore_index=True,
+)
+axis_limits['log2_fold_change'] = np.where(
+    axis_limits.index < len(ymax_by_gene),
+    axis_limits['log2_fold_change'] - axis_limits['ypad'],
+    axis_limits['log2_fold_change'] + axis_limits['ypad'],
+)
+axis_limits['p_title'] = pd.Categorical(axis_limits['genesymbol'].astype(str), categories=keys_corrected, ordered=True)
+axis_limits['grp'] = 'HR case, IFNG+ vs IFNG-'
+axis_limits = axis_limits.sort_values(['p_title', 'log2_fold_change']).reset_index(drop=True)
+
+pal = [c for c in sns.color_palette('tab10', n_colors=2).as_hex()]
+pal = pal[::-1]
+pal = {cat: color for cat, color in zip(ptab['grp'].cat.categories, pal)}
+
+plots_per_col = 8
+ncols = math.ceil(len(keys_corrected) / plots_per_col)
+w = 2.3 * plots_per_col if plots_per_col >= 4 else 6
+h = 4 * ncols
+
+contrast = 'grp'
+p = (
+    p9.ggplot(ptab, p9.aes(x=contrast, y='log2_fold_change', group=contrast))
+    + p9.geom_blank(
+        data=axis_limits,
+        mapping=p9.aes(x='grp', y='log2_fold_change')
+    )
+    + p9.geom_boxplot(outlier_alpha=0, size=0.8, width=0.3, show_legend=False)
+    + p9.geom_jitter(
+        p9.aes(fill=contrast),
+        color='black',
+        size=3,
+        width=0.1,
+        alpha=1.0,
+        show_legend=True
+    )
+    + p9.scale_fill_manual(pal)
+    + p9.guides(fill=p9.guide_legend(override_aes={'size': 6}))
+    + p9.scale_y_continuous(expand=(0, 0))
+    + p9.theme_classic()
+    + p9.labs(title="Log2 fold change of selected genes", y='Log2FC', x='disease group')
+    + p9.theme(
+        plot_title=p9.element_text(hjust=0.5, size=14),
+        strip_text=p9.element_text(size=12),
+        axis_title=p9.element_text(size=14),
+        axis_text_x=p9.element_blank(),
+        legend_text=p9.element_text(size=12),
+        figure_size=(w, h),
+    )
+    + p9.facet_wrap('~p_title', scales='free_y', ncol=plots_per_col)
+)
+p.save(out_plots / "Fig5g_boxplot_02_all_genes_zero_y.png", width=w, height=h, limitsize=False)
+p.save(out_plots / "Fig5g_boxplot_02_all_genes_zero_y.pdf", width=w, height=h, limitsize=False)
+plt.close()

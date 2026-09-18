@@ -4,7 +4,8 @@ import os
 
 configfile: "config/config.yaml"
 
-workdir: '/mnt/sds-hd/sd22b002/projects/mh/IgAN_PBMC_netherlands/'
+PROJECT_WORKDIR = os.environ.get("OLABISI_WORKDIR", os.getcwd())
+workdir: PROJECT_WORKDIR
 
 # define some variables
 batches=['pilot', 'run01sample01', 'run01sample02', 'run02sample01', 
@@ -403,15 +404,19 @@ rule pseudobulks:
 #         [f'output/scRNAseq/G_MOFAcell/plots/MOFAcell_plotAssociatedFactors/{lvl}/flag.txt' for lvl in ['lvl1', 'lvl2']]
 
 
-module preprocessing:
-    snakefile: 'rules/A_preprocessing.smk'
-    config: config
-use rule * from preprocessing as A_pp_*
+if os.path.exists(os.path.join("rules", "preprocessing.smk")):
+    module preprocessing:
+        snakefile: 'rules/preprocessing.smk'
+        config: config
+    use rule * from preprocessing as A_pp_*
 
-module pseudobulks:
-    snakefile: 'rules/B_pseudobulks.smk'
-    config: config
-use rule * from pseudobulks as B_pbulks_*
+if os.path.exists(os.path.join("rules", "B_pseudobulks.smk")):
+    module pseudobulks:
+        snakefile: 'rules/B_pseudobulks.smk'
+        config: config
+    use rule * from pseudobulks as B_pbulks_*
+
+include: "rules/DEA.smk"
 
 # module MOFAcell:
 #     snakefile: 'rules/C_MOFAcell.smk'
@@ -432,5 +437,3 @@ use rule * from pseudobulks as B_pbulks_*
 #     snakefile: 'rules/G_MOFAcell.smk'
 #     config: config
 # use rule * from G_MOFAcell as G_MOFAcell_*
-
-

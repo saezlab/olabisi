@@ -1,0 +1,16 @@
+name: pydeseq2_interaction
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.10
+  - numpy<2
+  - pandas
+  - scipy
+  - matplotlib
+  - snakemake
+  - scanpy
+  - decoupler-py>=2
+  - statsmodels>=0.14.4
+  - plotnine
+  - pydeseq2
