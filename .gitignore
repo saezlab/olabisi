@@ -16,6 +16,9 @@ data
 other
 logs
 output
+archive/
+results/
+plots/
 workflow/envs/*.sif
 workflow/scripts/tmp_scripts
 workflow/scripts/preprocessing/cache
