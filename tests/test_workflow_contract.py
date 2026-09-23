@@ -57,6 +57,13 @@ def test_python_snakemake_script_contract():
         assert "from __future__" not in text
 
 
+def test_editable_pdf_typography_contract():
+    style = (ROOT / "workflow/scripts/common.py").read_text()
+    assert '"font.family": "Arial"' in style
+    assert '"font.size": 8' in style
+    assert '"pdf.fonttype": 42' in style
+
+
 @pytest.mark.skipif(
     not (ROOT / "results/enrichment/ulm.tsv").exists(),
     reason="Generated ULM table is validated after the paper workflow runs",
