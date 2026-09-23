@@ -8,7 +8,9 @@ import scanpy as sc
 import seaborn as sns
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import read_checked_tsv
+from common import configure_matplotlib, read_checked_tsv
+
+configure_matplotlib()
 
 
 if "snakemake" in locals():
@@ -142,7 +144,7 @@ def plot_panel(name, genes, key, title):
             )
         stat = float(degs_by_symbol.loc[gene, "stat"])
         padj = float(degs_by_symbol.loc[gene, "padj"])
-        ax.set_title(f"{gene}\nStat: {stat:.2f}\nPadj: {padj:.2e}", fontsize=9)
+        ax.set_title(f"{gene}\nStat: {stat:.2f}\nPadj: {padj:.2e}", fontsize=8)
         ax.set_xlabel("")
         ax.set_ylabel("Log2 IFNG response")
         ax.set_xticklabels([])

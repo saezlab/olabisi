@@ -1,4 +1,5 @@
 from pathlib import Path
+import sys
 
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
@@ -6,6 +7,11 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import seaborn as sns
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common import configure_matplotlib
+
+configure_matplotlib()
 
 
 if "snakemake" in locals():
@@ -84,7 +90,7 @@ sns.heatmap(
 ax.set_title("Expression of selected podocyte markers across samples")
 ax.set_xlabel("Sample")
 ax.set_ylabel("")
-ax.tick_params(axis="x", labelsize=6)
+ax.tick_params(axis="x", labelsize=8)
 ax.tick_params(axis="y", labelsize=8)
 fig.tight_layout()
 fig.savefig(heatmap_png, dpi=300, bbox_inches="tight")

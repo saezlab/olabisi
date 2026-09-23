@@ -1,9 +1,15 @@
 from pathlib import Path
+import sys
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common import configure_matplotlib
+
+configure_matplotlib()
 
 
 if "snakemake" in locals():
