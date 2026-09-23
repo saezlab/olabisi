@@ -29,3 +29,8 @@ figures:
   selected_genes: [APOL1, APOL6, IRF1, STAT1, STAT2, STAT3, IRF2, IRF8, IRF9, CCL2, CXCL9, CXCL10, CXCL11, ICAM1, IDO1, GBP1, PSMB9, TMEM140, CTSS]
   top_targets: 18
   overview_top: 10
+
+extra_figures:
+  pca_components: 6
+  label_top_genes: 20
+  pseudocount: 0.000001

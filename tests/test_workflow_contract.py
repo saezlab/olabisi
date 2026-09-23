@@ -50,11 +50,40 @@ def test_python_snakemake_script_contract():
         ROOT / "workflow/scripts/figures/plot_fig5bc.py",
         ROOT / "workflow/scripts/figures/plot_enrichment.py",
         ROOT / "workflow/scripts/figures/plot_fig5g.py",
+        ROOT / "workflow/scripts/extra_figures/plot_qc.py",
+        ROOT / "workflow/scripts/extra_figures/plot_de_diagnostics.py",
+        ROOT / "workflow/scripts/extra_figures/plot_donor_diagnostics.py",
     ]
     for script in scripts:
         text = script.read_text()
         assert 'if "snakemake" in locals():' in text
         assert "from __future__" not in text
+
+
+def test_r_snakemake_script_contract():
+    scripts = [
+        ROOT / "workflow/scripts/DEA/calibrate_pvalues_interaction.R",
+        ROOT / "workflow/scripts/provenance/r_manifest.R",
+        ROOT / "workflow/scripts/extra_figures/plot_calibration_histograms.R",
+        ROOT / "workflow/scripts/extra_figures/plot_jak_stat_fgsea.R",
+    ]
+    for script in scripts:
+        assert 'if (exists("snakemake"))' in script.read_text()
+
+
+def test_editable_pdf_typography_contract():
+    style = (ROOT / "workflow/scripts/common.py").read_text()
+    assert '"font.family": "Arial"' in style
+    assert '"font.size": 8' in style
+    assert '"pdf.fonttype": 42' in style
+
+    for script in [
+        ROOT / "workflow/scripts/extra_figures/plot_calibration_histograms.R",
+        ROOT / "workflow/scripts/extra_figures/plot_jak_stat_fgsea.R",
+    ]:
+        text = script.read_text()
+        assert 'base_family = "Arial", base_size = 8' in text
+        assert "device = cairo_pdf" in text
 
 
 @pytest.mark.skipif(
@@ -107,3 +136,24 @@ def test_generated_sample_counts():
     assert int(summary["samples_total"]) == 66
     assert int(summary["samples_qc_group_a"]) == 50
     assert int(summary["complete_qc_group_a_pairs"]) == 25
+
+
+@pytest.mark.skipif(
+    not (ROOT / "results/extra_figures/source_data/jak_stat_fgsea.tsv").exists(),
+    reason="Extra-figure source data are validated on the extra_figures branch",
+)
+def test_generated_extra_figure_source_data():
+    pca = pd.read_csv(
+        ROOT / "results/extra_figures/source_data/pca.tsv", sep="\t"
+    )
+    donor = pd.read_csv(
+        ROOT / "results/extra_figures/source_data/donor_interaction_deltas.tsv",
+        sep="\t",
+    )
+    fgsea = pd.read_csv(
+        ROOT / "results/extra_figures/source_data/jak_stat_fgsea.tsv", sep="\t"
+    )
+    assert len(pca) == 66
+    assert donor["individualID"].nunique() == 25
+    assert donor["genesymbol"].nunique() == len(CONFIG["figures"]["selected_genes"])
+    assert fgsea["pathway"].tolist() == ["JAK-STAT"]

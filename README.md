@@ -37,14 +37,10 @@ snakemake --version
 
 The workflow maintains exactly two rule-level environments:
 
-- `workflow/envs/pyenv.yaml` for Python analysis and plotting.
-- `workflow/envs/renv.yaml` for R calibration.
+- `workflow/envs/pyenv.yaml` for Python DE analysis and plotting.
+- `workflow/envs/renv.yaml` for R p-value calibration.
 
-Snakemake creates those environments automatically. The `snakemake9`
-environment only runs the workflow engine and is not attached to analysis
-rules. Snakemake 9 calls this deployment method `conda`; the Conda installed in
-`snakemake9` uses the libmamba solver. The deprecated
-`--conda-frontend mamba` flag is therefore neither needed nor used.
+Snakemake creates those environments automatically.
 
 ## Run the paper workflow
 
@@ -59,13 +55,6 @@ To retrieve a missing prior-knowledge snapshot explicitly:
 
 ```bash
 snakemake --snakefile workflow/Snakefile --cores 1 download_prior_knowledge --software-deployment-method conda
-```
-
-When the timestamped pre-refactor archive is available locally, regenerate its
-machine-readable comparison report with:
-
-```bash
-snakemake --snakefile workflow/Snakefile --cores 1 compare_archive --software-deployment-method conda
 ```
 
 The timestamped Ensembl, CollecTRI, and PROGENy files distributed with the

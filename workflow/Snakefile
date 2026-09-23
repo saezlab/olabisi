@@ -60,8 +60,44 @@ PAPER_OUTPUTS = [
     "results/provenance/renv_packages.txt",
 ]
 
+EXTRA_OUTPUTS = [
+    "results/extra_figures/source_data/pca.tsv",
+    "results/extra_figures/source_data/pca_anova.tsv",
+    "results/extra_figures/source_data/umap_qc.tsv",
+    "plots/extra_figures/pca_qc.png",
+    "plots/extra_figures/pca_qc.pdf",
+    "plots/extra_figures/umap_qc.png",
+    "plots/extra_figures/umap_qc.pdf",
+    "results/extra_figures/source_data/de_diagnostics.tsv",
+    "results/extra_figures/de_significance_summary.tsv",
+    "plots/extra_figures/de_pvalue_histogram.png",
+    "plots/extra_figures/de_pvalue_histogram.pdf",
+    "plots/extra_figures/de_ma.png",
+    "plots/extra_figures/de_ma.pdf",
+    "plots/extra_figures/de_volcano.png",
+    "plots/extra_figures/de_volcano.pdf",
+    "plots/extra_figures/de_significant_counts.png",
+    "plots/extra_figures/de_significant_counts.pdf",
+    "results/extra_figures/source_data/calibration_histograms.tsv",
+    "plots/extra_figures/calibration_histograms.png",
+    "plots/extra_figures/calibration_histograms.pdf",
+    "results/extra_figures/source_data/donor_interaction_deltas.tsv",
+    "results/extra_figures/donor_interaction_report.tsv",
+    "plots/extra_figures/donor_interaction_deltas.png",
+    "plots/extra_figures/donor_interaction_deltas.pdf",
+    "results/extra_figures/source_data/selected_gene_4groups.tsv",
+    "plots/extra_figures/selected_gene_4groups.png",
+    "plots/extra_figures/selected_gene_4groups.pdf",
+    "results/extra_figures/source_data/interaction_response_scatter.tsv",
+    "plots/extra_figures/interaction_response_scatter.png",
+    "plots/extra_figures/interaction_response_scatter.pdf",
+    "results/extra_figures/source_data/jak_stat_fgsea.tsv",
+    "plots/extra_figures/jak_stat_fgsea.png",
+    "plots/extra_figures/jak_stat_fgsea.pdf",
+]
 
-localrules: all, paper, download_prior_knowledge, compare_archive
+
+localrules: all, paper, extra_figures, download_prior_knowledge, compare_archive
 
 
 rule all:
@@ -72,6 +108,11 @@ rule all:
 rule paper:
     input:
         PAPER_OUTPUTS
+
+
+rule extra_figures:
+    input:
+        EXTRA_OUTPUTS
 
 
 rule download_prior_knowledge:
@@ -94,3 +135,4 @@ include: "rules/preprocessing.smk"
 include: "rules/DEA.smk"
 include: "rules/figures.smk"
 include: "rules/provenance.smk"
+include: "rules/extra_figures.smk"
